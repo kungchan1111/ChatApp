@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat App</title>
+    <style>
+        body,
+        html {
+            font-family: 'Helvetica', sans-serif;
+            height: 100%;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #f6f6f6;
+        }
+
+        .chat-container {
+            background-color: #fff;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            width: 400px;
+            box-sizing: border-box;
+        }
+
+        .chat-header {
+            background-color: #6ce960;
+            border-radius: 10px 10px 0 0;
+            font-size: 20px;
+            padding: 10px 20px;
+            text-align: center;
+        }
+
+        .chat-messages {
+            height: 500px;
+            overflow-y: auto;
+            border: 1px solid #ccc;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .message {
+            padding: 10px;
+            border-radius: 6px;
+            max-width: 70%;
+        }
+
+        .time1,
+        .time2 {
+            color: #363636;
+            font-size: 6px;
+            margin-bottom: 10px;
+            display: flex;
+        }
+
+        .time1 {
+            justify-content: flex-end;
+        }
+
+        .time2 {
+            justify-content: flex-start;
+        }
+
+        .sent,
+        .sent_n {
+            background-color: #69f35d;
+            align-self: flex-end;
+        }
+
+        .sent_n {
+            background-color: white !important;
+            font-weight: 700;
+        }
+
+        .received,
+        .received_n {
+            background-color: #ffffff;
+            border: 1px solid #ccc;
+            align-self: flex-start;
+        }
+
+        .sent_n,
+        .received_n {
+            background-color: white !important;
+            border: none !important;
+            font-weight: 600;
+            font-size: 8.7px;
+            padding-bottom: 1.5px;
+        }
+
+        .chat-input {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+        }
+
+        input[type="text"]:nth-child(1) {
+            flex: 1;
+            width: 35px;
+            margin-right: 10px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+            outline: none;
+        }
+
+        input[type="text"]:nth-child(2) {
+            flex: 1;
+            margin-right: 10px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+            outline: none;
+        }
+
+        button {
+            background-color: #6ce960;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            padding: 10px 20px;
+        }
+
+        button:hover {
+            background-color: #53b84a;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="chat-container">
+        <div class="chat-header">채팅방</div>
+        <div class="chat-messages" id="messages"></div>
+        <div class="chat-input">
+            <input type="text" id="name" placeholder="이름 입력">
+            <input type="text" id="message" placeholder="메시지 입력">
+            <button id="btnSend">전송</button>
+        </div>
+    </div>
+    <script src="/socket.io/socket.io.js?v=1"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const socket = io.connect();
+            const messages = document.getElementById("messages");
+            const messageInput = document.getElementById("message");
+            const nameInput = document.getElementById("name");
+            const btnSend = document.getElementById("btnSend");
+            const clientId = Math.random().toString(36).substring(7);
+
+            function addMessage(message, time, clientId, name) {
+                let messageDiv = document.createElement("div");
+                messageDiv.classList.add("message");
+                messageDiv.innerText = message;
+
+                let timeDiv = document.createElement("div");
+                timeDiv.classList.add("time");
+                timeDiv.innerText = `${time.getMonth() + 1
+                    }월${time.getDate()}일 ${time.getHours()}시${time.getMinutes()}분`;
+
+                let nameDiv = document.createElement("div");
+                nameDiv.classList.add("name");
+                nameDiv.innerText = name;
+
+                if (clientId === socket.id) {
+                    messageDiv.classList.add("sent");
+                    timeDiv.classList.add("time1");
+                    nameDiv.classList.add("sent_n")
+                } else {
+                    messageDiv.classList.add("received");
+                    timeDiv.classList.add("time2");
+                    nameDiv.classList.add("received_n");
+                }
+
+                messages.appendChild(nameDiv);
+                messages.appendChild(messageDiv);
+                messages.appendChild(timeDiv);
+
+                messages.scrollTop = messages.scrollHeight;
+            }
+
+            btnSend.onclick = function () {
+                let msg = messageInput.value;
+                let msgTime = new Date().toUTCString();
+                let name = nameInput.value;
+
+                if (!msg.trim() || !name.trim()) {
+                    messageInput.focus();
+                    return;
+                }
+
+                socket.emit("msg", {
+                    msg: msg,
+                    datatime: msgTime,
+                    clientId: clientId,
+                    name: name,
+                });
+
+                messageInput.value = "";
+            };
+
+            messageInput.addEventListener("keydown", function (event) {
+                if (event.key === "Enter") {
+                    event.preventDefault();
+                    btnSend.click();
+                }
+            });
+
+            socket.on("say", function (data) {
+                const { msg, datatime, clientId, name } = data;
+                let time = new Date(datatime);
+                addMessage(msg, time, clientId, name);
+            });
+        });
+
+    </script>
+</body>
+
+</html>
